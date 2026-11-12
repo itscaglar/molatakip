@@ -1,19 +1,19 @@
 <script lang="ts">
-	import { onDestroy } from "svelte";
+	import { onDestroy } from 'svelte';
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import CopyIcon from '@lucide/svelte/icons/copy';
-	import { Button, type ButtonProps } from "#lib/components/shadcn/ui/button/index.js";
-	import { cn } from "#lib/components/shadcn/index.js";
+	import { Button, type ButtonProps } from '#lib/components/shadcn/ui/button/index.js';
+	import { cn } from '#lib/components/shadcn/index.js';
 
 	let {
 		ref = $bindable(null),
 		class: className,
 		value,
-		variant = "ghost",
-		size = "icon-xs",
+		variant = 'ghost',
+		size = 'icon-xs',
 		onclick,
 		...restProps
-	}: Omit<ButtonProps, "onclick"> & {
+	}: Omit<ButtonProps, 'onclick'> & {
 		value: string;
 		onclick?: (e: MouseEvent) => void;
 	} = $props();
@@ -41,7 +41,7 @@
 	data-copied={copied || undefined}
 	{variant}
 	{size}
-	aria-label={copied ? "Copied" : "Copy"}
+	aria-label={copied ? 'Copied' : 'Copy'}
 	class={cn(className)}
 	onclick={(e) => {
 		onclick?.(e);
@@ -50,9 +50,9 @@
 	{...restProps}
 >
 	{#if copied}
-		<CheckIcon  />
+		<CheckIcon />
 	{:else}
-		<CopyIcon  />
+		<CopyIcon />
 	{/if}
 </Button>
-<span aria-live="polite" class="sr-only">{copied ? "Copied" : ""}</span>
+<span aria-live="polite" class="sr-only">{copied ? 'Copied' : ''}</span>
