@@ -1,110 +1,85 @@
 import {
-	doublePrecision,
+	boolean,
+	date,
 	integer,
 	pgEnum,
 	pgTable,
 	text,
-	time,
 	timestamp,
+	uniqueIndex,
 	uuid
 } from 'drizzle-orm/pg-core';
 import { user } from './auth.schema';
+import { relations } from 'drizzle-orm';
 
 export * from './auth.schema';
 
-/**
- * Kullanıcı rolleri için enum tanımı
- *
- * admin: Yönetici (tüm yetkilere sahip)
- * manager: Mağaza yöneticisi (vardiya yöneticisi)
- * personel: Mağaza personeli
- */
-export const userRoleEnum = pgEnum('user_role', ['admin', 'manager', 'personel']);
+export const roleType = pgEnum('role_type', ['admin', 'manager', 'user']);
 
-/**
- * Mola türleri için enum tanımı (4857 sayılı İş Kanunu'na göre)
- *
- * short: 15 dk (4 saat veya daha kısa)
- * medium: 30 dk (4 saatten fazla, 7,5 saate kadar)
- * long: 60 dk (7,5 saatten fazla)
- */
-export const breakTypeEnum = pgEnum('break_type', ['short', 'medium', 'long']);
+export const breakType = pgEnum('break_type', ['short', 'medium', 'long']);
 
-/**
- * Giriş/Çıkış türleri için enum tanımı
- *
- * check-in: Giriş
- * check-out: Çıkış
- */
-export const attendanceTypeEnum = pgEnum('attendance_type', ['check-in', 'check-out']);
-
-/**
- * Mola düzeltme durumları için enum tanımı
- *
- * pending: Beklemede (yönetici onayı bekliyor)
- * approved: Onaylandı (yönetici tarafından onaylandı)
- * rejected: Reddedildi (yönetici tarafından reddedildi)
- */
-export const correctionStatusEnum = pgEnum('correction_status', [
-	'pending',
-	'approved',
-	'rejected'
-]);
-
-/**
- * Konum tablosu
- *
- * QR kodu ile giriş/çıkış yapabilmek için konum bilgilerini saklar. Her konumun bir adı, koordinatları ve bir yarıçapı vardır. Ayrıca her konum için benzersiz bir QR token üretilir.
- */
-export const locationTable = pgTable('location', {
+export const qrPoints = pgTable('qr_points', {
 	id: uuid('id').primaryKey().defaultRandom(),
 	name: text('name').notNull(),
-	latitude: doublePrecision('latitude').notNull(),
-	longitude: doublePrecision('longitude').notNull(),
-	radiusMeters: integer('radius_meters').notNull(),
-	qrToken: uuid('qr_token').defaultRandom().notNull().unique(),
-	createdAt: timestamp('created_at').defaultNow().notNull()
+	code: text('code').notNull().unique(),
+	isActive: boolean('is_active').notNull().default(true),
+	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 });
 
-/**
- * Mola tablosu
- *
- * Kullanıcıların giriş/çıkış yapabilmesi için kullanılır. Her mola, bir kullanıcıya ve bir vardiyaya aittir.
- */
-export const breakTable = pgTable('break', {
-	id: text('id').primaryKey(),
+export const shifts = pgTable(
+	'shifts',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		workDate: date('work_date').notNull(),
+		startMin: integer('start_min'),
+		endMin: integer('end_min')
+	},
+	(table) => [uniqueIndex('shifts_user_date_key').on(table.userId, table.workDate)]
+);
+
+export const breaks = pgTable('breaks', {
+	id: uuid('id').primaryKey().defaultRandom(),
 	userId: text('user_id')
 		.notNull()
 		.references(() => user.id, { onDelete: 'cascade' }),
-	type: breakTypeEnum('type').notNull(),
-	startTime: timestamp('start_time').defaultNow().notNull(),
-	endTime: timestamp('end_time'), // Mola bitene kadar null kalır
-	createdAt: timestamp('created_at').defaultNow().notNull()
+	qrPointId: uuid('qr_point_id')
+		.notNull()
+		.references(() => qrPoints.id, { onDelete: 'restrict' }),
+	workDate: date('work_date').notNull(),
+	type: breakType('type').notNull().default('short'),
+	startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+	endsAt: timestamp('ends_at', { withTimezone: true }).notNull(),
+	endedAt: timestamp('ended_at', { withTimezone: true })
 });
 
-/**
- * Vardiya tablosu
- *
- * Her vardiyanın bir adı, başlangıç ve bitiş zamanı vardır. Vardiyalar, kullanıcıların giriş/çıkış yapabilmesi için kullanılır.
- */
-export const shiftTable = pgTable('shift', {
-	id: uuid('id').primaryKey().defaultRandom(),
-	name: text('name').notNull(),
-	startTime: time('start_time').notNull(),
-	endTime: time('end_time').notNull(),
-	totalBreakMinutes: integer('total_break_minutes').default(60).notNull(),
-	createdAt: timestamp('created_at').defaultNow().notNull()
-});
+export const userRelations = relations(user, ({ many }) => ({
+	shifts: many(shifts),
+	breaks: many(breaks)
+}));
 
-/**
- * Audit log tablosu
- *
- * Kullanıcıların yaptığı işlemleri kaydeder.
- */
-export const auditLogTable = pgTable('audit_log', {
-	id: uuid('id').primaryKey().defaultRandom(),
-	actorId: text('actor_id').references(() => user.id, { onDelete: 'set null' }),
-	action: text('action').notNull(),
-	details: text('details'),
-	createdAt: timestamp('created_at').defaultNow().notNull()
-});
+export const qrPointsRelations = relations(qrPoints, ({ many }) => ({
+	breaks: many(breaks)
+}));
+
+export const shiftsRelations = relations(shifts, ({ one }) => ({
+	user: one(user, { fields: [shifts.userId], references: [user.id] })
+}));
+
+export const breaksRelations = relations(breaks, ({ one }) => ({
+	user: one(user, { fields: [breaks.userId], references: [user.id] }),
+	qrPoint: one(qrPoints, { fields: [breaks.qrPointId], references: [qrPoints.id] })
+}));
+
+export type QrPoint = typeof qrPoints.$inferSelect;
+export type NewQrPoint = typeof qrPoints.$inferInsert;
+
+export type Shift = typeof shifts.$inferSelect;
+export type NewShift = typeof shifts.$inferInsert;
+
+export type Break = typeof breaks.$inferSelect;
+export type NewBreak = typeof breaks.$inferInsert;
+
+export type BreakType = (typeof breakType.enumValues)[number];
