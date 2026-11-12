@@ -1,4 +1,4 @@
-import { loadHighlighter, type Highlighter, type HighlightedLine } from '#lib/highlighter.js';
+import { loadHighlighter, type Highlighter, type HighlightedLine } from '#lib/components/shadcn/hooks/highlighter.js';
 import type { GrammarState } from 'shiki/core';
 
 /**
