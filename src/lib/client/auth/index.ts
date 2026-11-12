@@ -64,7 +64,7 @@ export const signInWithEmailAndPassword = async (
 	return { data, error };
 };
 
-export const signOut = async (redirectTo: string = '/login') => {
+export const signOut = async (redirectTo: string = '/sign-in') => {
 	const { data, error } = await authClient.signOut({
 		fetchOptions: {
 			onSuccess: async () => {
