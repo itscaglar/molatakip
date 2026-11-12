@@ -1,22 +1,29 @@
 <script lang="ts">
-	import { authClient, signOut } from '#lib/client/auth/index.ts';
+	import { refreshAll } from '$app/navigation';
+	import { signOut } from '#lib/client/auth/index.ts';
 	import * as CodeBlock from '#lib/components/shadcn/ui/code-block/index.ts';
 	import { Button } from '#lib/components/shadcn/ui/button/index.ts';
 	import { LogOut, User, UserRoundPlus } from '@lucide/svelte';
 	import { useHighlightedCode } from '#lib/components/shadcn/hooks/use-highlighted-code.svelte.ts';
+	import type { PageProps } from './$types';
 
-	const session = authClient.useSession();
+	let { data }: PageProps = $props();
 
 	const sessionCodeLines = useHighlightedCode(
-		() => JSON.stringify($session?.data, null, 2),
+		() => JSON.stringify(data.session, null, 2),
 		() => 'json'
 	);
+
+	async function handleSignOut() {
+		await signOut('/');
+		await refreshAll();
+	}
 </script>
 
 <div class="m-16 flex flex-col items-center justify-center gap-4">
-	{#if $session.data}
-		<p class="text-lg">Merhaba, {$session.data.user.name}</p>
-		<Button variant="destructive" onclick={async () => await signOut()}>
+	{#if data.session}
+		<p class="text-lg">Merhaba, {data.session.user.name}</p>
+		<Button variant="destructive" onclick={handleSignOut}>
 			<LogOut />
 			Çıkış Yap
 		</Button>
