@@ -20,7 +20,7 @@ export const breakType = pgEnum('break_type', ['short', 'medium', 'long']);
 
 export const qrPoints = pgTable('qr_points', {
 	id: uuid('id').primaryKey().defaultRandom(),
-	name: text('name').notNull(),
+	name: text('name').notNull().unique(),
 	code: text('code').notNull().unique(),
 	isActive: boolean('is_active').notNull().default(true),
 	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
